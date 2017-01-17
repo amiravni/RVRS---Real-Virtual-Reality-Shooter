@@ -38,7 +38,9 @@ ovrHmd_StartSensor( \
 )
 
 cam = cv2.VideoCapture(1)
-lastStep = 0
+yaw.lastStep = 0
+pitch.lastStep = 0
+roll.lastStep = 0
 while True:
 
 	ret,img = cam.read()
@@ -47,21 +49,22 @@ while True:
 		cv2.waitKey(1)
 	ss = ovrHmd_GetSensorState(hmd, ovr_GetTimeInSeconds())
 	pose = ss.Predicted.Pose
-	q = Quat([pose.Orientation.w,pose.Orientation.x,pose.Orientation.y,pose.Orientation.z])
+	q = Quat([pose.Orientation.w,pose.Orientation.x,pose.Orientation.y,pose.Orientation.z])   # q.ra --> Pitch , q.dec --> Yaw , q.roll --> Roll
 #	print q.ra, q.dec, q.roll
 
-#	encoderCommand = [int(q.dec*theta2enc[0]),0*theta2enc[1],0*theta2enc[2],0,0,0]
-#	print encoderCommand
-	newStep = int((q.dec/180)*100)
-	steps = newStep - lastStep
-	lastStep = newStep
- 	if steps > 100:
-		steps = 100
-	if steps < -100:
-		steps = -100
-	if steps != 0:
+
+	# this part is true only for "pitch" of -90 to 90 degrees (The half dome infront of a person )
+	yaw.newStep = ((q.dec/180)*100)
+ 	if yaw.newStep > 100:
+		yaw.newStep = 100
+	if yaw.newStep < -100:
+		yaw.newStep = -100	
+	yaw.steps = int(round(yaw.newStep - yaw.lastStep))
+	yaw.lastStep = yaw.newStep
+
+	if yaw.steps != 0:
 #		print(q.dec,steps)
-		ser.write(struct.pack('B',steps + 128))
+		ser.write(struct.pack('B',yaw.steps + 128))
  	time.sleep(0.0005)
 #	recv = ser.read(1024).lstrip().rstrip()
 #	if len(recv) > 0:
