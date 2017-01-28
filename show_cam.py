@@ -3,6 +3,28 @@ import sys
 import os
 import time
 import numpy as np
+import serial
+import struct
+from ovrsdk import *
+from Quaternion import Quat
+import binascii
+import cv2
+
+
+ser = serial.Serial('/dev/ttyUSB0',baudrate=115200)
+ser.timeout = 0.00
+
+ovr_Initialize()
+hmd = ovrHmd_Create(0)
+hmdDesc = ovrHmdDesc()
+ovrHmd_GetDesc(hmd, byref(hmdDesc))
+print hmdDesc.ProductName
+ovrHmd_StartSensor( \
+  hmd,
+  ovrSensorCap_Orientation |
+  ovrSensorCap_YawCorrection,
+  0
+)
 
 cam_left = cv2.VideoCapture(0)
 cam_right = cv2.VideoCapture(1)
@@ -15,6 +37,10 @@ send_screens = False
 frameIdx = 0
 left_canvas = np.zeros((1080,960,3)).astype('uint8')
 right_canvas = np.zeros((1080,960,3)).astype('uint8')
+
+yaw_lastStep = 0
+pitch_lastStep = 0
+roll_lastStep = 0
 
 while True:
     ret,left_img = cam_left.read()
@@ -33,6 +59,39 @@ while True:
         if frameIdx > 10 and  not send_screens:
             os.system('bash send-app-windows.sh')
             send_screens=True 
+    
+    ss = ovrHmd_GetSensorState(hmd, ovr_GetTimeInSeconds())
+    pose = ss.Predicted.Pose
+    q = Quat([pose.Orientation.w,pose.Orientation.x,pose.Orientation.y,pose.Orientation.z])   # 	q.ra --> Pitch , q.dec --> Yaw , q.roll --> Roll
+    #print q.ra, q.dec, q.roll
 
+    # this part is true only for "pitch" of -90 to 90 degrees (The half dome infront of a person )
+    yaw_newStep = ((q.dec/180)*100)
+    if yaw_newStep > 100:
+	    yaw_newStep = 100
+    if yaw_newStep < -100:
+	    yaw_newStep = -100	
+    yaw_steps = int(round(yaw_newStep - yaw_lastStep))
+    yaw_lastStep = yaw_newStep
+    
+    ra_corrected = q.ra
+    if q.ra > 180.0:
+        ra_corrected = q.ra - 360.0
+
+    pitch_newStep = (((ra_corrected)/180)*100)
+    if pitch_newStep > 100:
+	    pitch_newStep = 100
+    if pitch_newStep < -100:
+	    pitch_newStep = -100	
+    pitch_steps = int(round(pitch_newStep - pitch_lastStep))
+    pitch_lastStep = pitch_newStep
+
+    if yaw_steps != 0 or pitch_steps != 0:
+    	print(q.dec,q.ra,yaw_steps,pitch_steps)
+        ser.write(struct.pack(2*'B',yaw_steps + 128,pitch_steps + 128))
+    time.sleep(0.0005)
+    recv = ser.read(1024).lstrip().rstrip()
+    if len(recv) > 0:
+    	print recv
 
 

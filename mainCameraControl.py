@@ -22,8 +22,8 @@ import binascii
 
 import cv2
 
-ser = serial.Serial('COM8',baudrate=115200)
-ser.timeout = 0.00
+#ser = serial.Serial('COM8',baudrate=115200)
+#ser.timeout = 0.00
 
 ovr_Initialize()
 hmd = ovrHmd_Create(0)
@@ -38,9 +38,9 @@ ovrHmd_StartSensor( \
 )
 
 cam = cv2.VideoCapture(1)
-yaw.lastStep = 0
-pitch.lastStep = 0
-roll.lastStep = 0
+yaw_lastStep = 0
+pitch_lastStep = 0
+roll_lastStep = 0
 while True:
 
 	ret,img = cam.read()
@@ -49,22 +49,27 @@ while True:
 		cv2.waitKey(1)
 	ss = ovrHmd_GetSensorState(hmd, ovr_GetTimeInSeconds())
 	pose = ss.Predicted.Pose
+        print pose.Orientation.w
+        print pose.Orientation.x
+        print pose.Orientation.y
+        print pose.Orientation.z
+
 	q = Quat([pose.Orientation.w,pose.Orientation.x,pose.Orientation.y,pose.Orientation.z])   # q.ra --> Pitch , q.dec --> Yaw , q.roll --> Roll
-#	print q.ra, q.dec, q.roll
+	print q.ra, q.dec, q.roll
 
 
 	# this part is true only for "pitch" of -90 to 90 degrees (The half dome infront of a person )
-	yaw.newStep = ((q.dec/180)*100)
- 	if yaw.newStep > 100:
-		yaw.newStep = 100
-	if yaw.newStep < -100:
-		yaw.newStep = -100	
-	yaw.steps = int(round(yaw.newStep - yaw.lastStep))
-	yaw.lastStep = yaw.newStep
+	yaw_newStep = ((q.dec/180)*100)
+ 	if yaw_newStep > 100:
+		yaw_newStep = 100
+	if yaw_newStep < -100:
+		yaw_newStep = -100	
+	yaw_steps = int(round(yaw_newStep - yaw_lastStep))
+	yaw_lastStep = yaw_newStep
 
-	if yaw.steps != 0:
+#	if yaw.steps != 0:
 #		print(q.dec,steps)
-		ser.write(struct.pack('B',yaw.steps + 128))
+		#ser.write(struct.pack('B',yaw.steps + 128))
  	time.sleep(0.0005)
 #	recv = ser.read(1024).lstrip().rstrip()
 #	if len(recv) > 0:
