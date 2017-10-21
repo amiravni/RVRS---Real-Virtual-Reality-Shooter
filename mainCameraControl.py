@@ -13,14 +13,14 @@ dictionary:
 
 import numpy as np
 import time
-import serial
+#import serial
 import struct
 import time
 from ovrsdk import *
 from Quaternion import Quat
 import binascii
 
-import cv2
+import cv2  ## to insall--> pip install opencv-python
 
 #ser = serial.Serial('COM8',baudrate=115200)
 #ser.timeout = 0.00
@@ -49,13 +49,13 @@ while True:
 		cv2.waitKey(1)
 	ss = ovrHmd_GetSensorState(hmd, ovr_GetTimeInSeconds())
 	pose = ss.Predicted.Pose
-        print pose.Orientation.w
-        print pose.Orientation.x
-        print pose.Orientation.y
-        print pose.Orientation.z
+        #print pose.Orientation.w
+        #print pose.Orientation.x
+        #print pose.Orientation.y
+        #print pose.Orientation.z
 
 	q = Quat([pose.Orientation.w,pose.Orientation.x,pose.Orientation.y,pose.Orientation.z])   # q.ra --> Pitch , q.dec --> Yaw , q.roll --> Roll
-	print q.ra, q.dec, q.roll
+#	print q.ra, q.dec, q.roll
 
 
 	# this part is true only for "pitch" of -90 to 90 degrees (The half dome infront of a person )
@@ -66,7 +66,7 @@ while True:
 		yaw_newStep = -100	
 	yaw_steps = int(round(yaw_newStep - yaw_lastStep))
 	yaw_lastStep = yaw_newStep
-
+	print yaw_newStep
 #	if yaw.steps != 0:
 #		print(q.dec,steps)
 		#ser.write(struct.pack('B',yaw.steps + 128))

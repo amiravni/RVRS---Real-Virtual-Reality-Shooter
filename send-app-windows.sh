@@ -26,3 +26,7 @@ if [ $? -eq 0 ]; then
     wmctrl -r $RIGHT_TITLE -e 0,2600,0,960,1080
 
 fi
+
+
+#wmctrl -r $LEFT_TITLE -e 0,0,0,960,1080
+#wmctrl -r $RIGHT_TITLE -e 0,1080,0,960,1080

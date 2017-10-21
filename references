@@ -1,0 +1,10 @@
+PID and motor:
+http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
+https://github.com/br3ttb/Arduino-PID-Library
+http://www.expertune.com/tutor.aspx
+https://www.pololu.com/product/2825
+
+
+to install serial--> use pyserial
+https://github.com/amiravni/RVRS---Real-Virtual-Reality-Shooter
+http://www.lfd.uci.edu/~gohlke/pythonlibs/
