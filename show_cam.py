@@ -10,7 +10,7 @@ from Quaternion import Quat
 import binascii
 import cv2  #### DONOT: pip install opencv-python DO: sudo apt-get install python-opencv
 
-serialExist = True
+serialExist = False
 if serialExist:
   ser = serial.Serial('/dev/ttyACM0',baudrate=115200)
   ser.timeout = 0.00
