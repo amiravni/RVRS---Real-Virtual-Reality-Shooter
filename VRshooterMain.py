@@ -5,6 +5,7 @@ import time
 import numpy as np
 import serial   ### pip install serial, pip install pyserial
 import struct
+import dlib
 #Threads
 from thread import start_new_thread
 from threading import Lock
@@ -20,7 +21,7 @@ right_camera_image = []
 face_locations_global = []
 face_names_global = []
 grab_data = True
-
+MAX_FACES = 10
 
 frame_lock = Lock()
 
@@ -29,7 +30,7 @@ def cameras_handle():
 	global face_locations_global
 	global face_names_global
 	global grab_data
-	cam_left = cv2.VideoCapture(2)
+	cam_left = cv2.VideoCapture(0)
 	cam_right = cv2.VideoCapture(1)
 
 	cv2.namedWindow("left", cv2.WND_PROP_FULLSCREEN)
@@ -38,6 +39,13 @@ def cameras_handle():
 	left_canvas = np.zeros((1080,960,3)).astype('uint8')
 	right_canvas = np.zeros((1080,960,3)).astype('uint8')
 	scaling_factor = 1
+	
+	tracker = []
+	# Initial co-ordinates of the object to be tracked 
+	# Create the tracker object
+	for fff in range(0,MAX_FACES):
+		tracker.append(dlib.correlation_tracker())
+	
 	while True:
 		ret1,left_img = cam_left.read()
 		ret2,right_img = cam_right.read()
@@ -47,6 +55,12 @@ def cameras_handle():
 			downscale = 1/float(scaling_factor)
 			small_left_img = cv2.resize(resized_left_img, (0, 0), fx=downscale, fy=downscale)
 
+			frame_lock.acquire()
+			try:
+				left_camera_image = small_left_img		
+			finally:
+				frame_lock.release()				
+			
 			if grab_data == True:
 				frame_lock.acquire()
 				try:
@@ -54,10 +68,24 @@ def cameras_handle():
 
 					faces_positions_local = face_locations_global
 					faces_names_local = face_names_global	
-					grab_data = False					
-
+					grab_data = False										
 				finally:
 					frame_lock.release()
+				# Provide the tracker the initial position of the object
+				if len(faces_positions_local) > 0:
+					for fff in range(0,len(faces_positions_local)):
+						tracker[fff].start_track(small_left_img, dlib.rectangle(top = faces_positions_local[fff][0],right = faces_positions_local[fff][1],bottom= faces_positions_local[fff][2],left = faces_positions_local[fff][3]))
+
+			# Update the tracker  
+			if len(faces_positions_local) > 0:
+				for fff in range(0,len(faces_positions_local)):
+					tracker[fff].update(small_left_img)
+					rect = tracker[fff].get_position()
+					faces_positions_local[fff] = [int(rect.top()),int(rect.right()),int(rect.bottom()),int(rect.left())]
+			#pt1 = (int(rect.left()), int(rect.top()))
+			#pt2 = (int(rect.right()), int(rect.bottom()))
+			#cv2.rectangle(img, pt1, pt2, (255, 255, 255), 3)       	 	
+			
 			for (top, right, bottom, left), name in zip(faces_positions_local, faces_names_local):
 				# Scale back up face locations since the frame we detected in was scaled to 1/4 size
 				top *= scaling_factor
