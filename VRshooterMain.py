@@ -22,6 +22,7 @@ face_locations_global = []
 face_names_global = []
 grab_data = True
 MAX_FACES = 10
+serialExist = False
 
 frame_lock = Lock()
 
@@ -39,7 +40,8 @@ def cameras_handle():
 	left_canvas = np.zeros((1080,960,3)).astype('uint8')
 	right_canvas = np.zeros((1080,960,3)).astype('uint8')
 	scaling_factor = 1
-	
+	send_screens = False
+	frameIdx = 0
 	tracker = []
 	# Initial co-ordinates of the object to be tracked 
 	# Create the tracker object
@@ -54,7 +56,7 @@ def cameras_handle():
 			resized_right_img = cv2.resize(right_img,(960,720))
 			downscale = 1/float(scaling_factor)
 			small_left_img = cv2.resize(resized_left_img, (0, 0), fx=downscale, fy=downscale)
-
+			frameIdx = frameIdx + 1
 			frame_lock.acquire()
 			try:
 				left_camera_image = small_left_img		
@@ -106,7 +108,10 @@ def cameras_handle():
 			right_canvas[180:900,:] = resized_right_img.astype('uint8')
 			cv2.imshow('left',left_canvas)
 			cv2.imshow('right',right_canvas)
-			cv2.waitKey(1)	
+			cv2.waitKey(1)
+			if frameIdx > 10 and  not send_screens:
+				os.system('bash send-app-windows.sh')
+				send_screens=True 	
 		
 
 def face_recognition_handle():
@@ -179,8 +184,64 @@ def face_recognition_handle():
 				frame_lock.release()
 
 def oculus_handle():
-	a = 1
-			
+	ovr_Initialize()
+	hmd = ovrHmd_Create(0)
+	hmdDesc = ovrHmdDesc()
+	ovrHmd_GetDesc(hmd, byref(hmdDesc))
+	print hmdDesc.ProductName
+	ovrHmd_StartSensor( \
+	hmd,
+	ovrSensorCap_Orientation |
+	ovrSensorCap_YawCorrection,
+	0
+	)
+		
+	yaw_lastStep = 0
+	pitch_lastStep = 0
+	roll_lastStep = 0
+	yaw_steps = 0
+
+	while True:
+		ss = ovrHmd_GetSensorState(hmd, ovr_GetTimeInSeconds())
+		pose = ss.Predicted.Pose
+		q = Quat([pose.Orientation.w,pose.Orientation.x,pose.Orientation.y,pose.Orientation.z])   # 	q.ra --> Pitch , q.dec --> Yaw , q.roll --> Roll
+		print q.ra, q.dec, q.roll
+
+		# this part is true only for "pitch" of -90 to 90 degrees (The half dome infront of a person )
+		steps_per_rev = 127
+		yaw_newStep = -((q.dec/180)*steps_per_rev)
+		if yaw_newStep > steps_per_rev:
+			yaw_newStep = steps_per_rev
+		if yaw_newStep < -steps_per_rev:
+			yaw_newStep = -steps_per_rev
+		#yaw_steps =#int(round(yaw_newStep - yaw_lastStep))
+		yaw_lastStep  = yaw_steps
+		yaw_steps = int(round(yaw_newStep))
+		#yaw_lastStep = yaw_newStep
+
+		ra_corrected = q.ra
+		if q.ra > 180.0:
+			ra_corrected = q.ra - 360.0
+
+		pitch_newStep = (((ra_corrected)/180)*100)
+		if pitch_newStep > 100:
+			pitch_newStep = 100
+		if pitch_newStep < -100:
+			pitch_newStep = -100
+		pitch_steps = int(round(pitch_newStep - pitch_lastStep))
+		pitch_lastStep = pitch_newStep
+
+		if yaw_steps != yaw_lastStep: # or pitch_steps != 0:
+			print(q.dec,q.ra,yaw_steps,pitch_steps)
+		#ser.write(struct.pack(2*'B',yaw_steps + 128,pitch_steps + 128))
+		if serialExist:
+			ser.write(struct.pack('BB',yaw_steps+128,10))
+		time.sleep(0.0005)
+		if (serialExist):
+			recv = ser.read(1024).lstrip().rstrip()
+			if len(recv) > 0:
+				print recv
+
 
 if __name__ == '__main__':
     

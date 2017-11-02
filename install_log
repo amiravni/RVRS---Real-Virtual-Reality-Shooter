@@ -1,0 +1,37 @@
+sudo apt-get git git-gui
+sudo apt-get update && sudo apt-get -y upgrade
+sudo apt-get install python-pip
+sudo apt-get install python-opencv
+sudo pip install python-ovrsdk pyserial
+sudo apt-get install cmake
+
+sudo apt-get install build-essential cmake pkg-config
+sudo apt-get install libx11-dev libatlas-base-dev
+sudo apt-get install libgtk-3-dev libboost-python-dev
+sudo apt-get install python-dev python-pip 
+sudo -H pip2 install -U pip numpy
+sudo pip install numpy scipy matplotlib scikit-image scikit-learn ipython
+sudo pip install scipy Pillow
+sudo pip install Quaternion
+
+wget http://dlib.net/files/dlib-19.6.tar.bz2
+tar xvf dlib-19.6.tar.bz2
+cd dlib-19.6/
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+sudo make install
+sudo ldconfig
+cd ..
+
+pkg-config --libs --cflags dlib-1
+cd dlib-19.6
+sudo python setup.py install
+
+sudo pip install dlib
+sudo pip install git+https://github.com/ageitgey/face_recognition_models
+sudo pip install face_recognition
+
+sudo apt-get install wmctrl
+

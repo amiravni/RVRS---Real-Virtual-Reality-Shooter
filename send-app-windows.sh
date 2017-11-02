@@ -19,11 +19,11 @@ if [ $? -eq 0 ]; then
     RIGHT_TITLE="$(wmctrl -l | grep -i $RIGHT | awk '{$1=$2=$3="";print }')"
 #printf "THIS IS A TEST %s",$LEFT_TITLE
 #printf "THIS IS A TEST 2 %s",$RIGHT_TITLE
-    wmctrl -r $LEFT_TITLE -e 0,1680,0,960,1080
+    wmctrl -r $LEFT_TITLE -e 0,1920,0,960,1080
 
     sleep 0.5
 
-    wmctrl -r $RIGHT_TITLE -e 0,2600,0,960,1080
+    wmctrl -r $RIGHT_TITLE -e 0,2880,0,960,1080
 
 fi
 
