@@ -13,11 +13,11 @@
     if (DEBUG) Serial.println(STR); \
   }
 //Define Pins
-#define Motor0PinA 7
-#define Motor0PinB 8
-#define Motor0EncoderPinA 2   // Encoder Pin A pin 2 and pin 3 are inturrpt pins (MUST BE 2 OR 3)
-#define Motor0EncoderPinB 4   // Encoder Pin B
-#define Motor0PWM 5
+#define Motor0PinA 39
+#define Motor0PinB 47
+#define Motor0EncoderPinA 20   // Encoder Pin A pin 2 and pin 3 are inturrpt pins (MUST BE 2 OR 3)
+#define Motor0EncoderPinB 25  // Encoder Pin B
+#define Motor0PWM 46
 
 #define Motor1PinA 10
 #define Motor1PinB 9
