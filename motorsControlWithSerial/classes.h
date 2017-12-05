@@ -113,7 +113,7 @@ class motor {
       PRINTDEBUG(motorNumber);
       PRINTDEBUG(" , ");  */
       counts1Last = currentEncoderValue;       
-      if (motorPWMPinVal < 20) moveMotorStop();
+      if (motorPWMPinVal < 30) moveMotorStop();
       else       moveMotorPID();
       /*if (lastStepsCommand - currentEncoderValue < -10) moveMotorCCW(motorPWMPinVal, true);
       else if (lastStepsCommand - currentEncoderValue > 10) moveMotorCW(motorPWMPinVal, true);

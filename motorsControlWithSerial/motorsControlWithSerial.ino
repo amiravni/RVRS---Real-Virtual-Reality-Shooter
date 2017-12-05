@@ -17,10 +17,10 @@
 // Motor0 -> Azimuth
 #define Motor0PinA 39
 #define Motor0PinB 47
-#define Motor0EncoderPinA 20   // Encoder Pin A pin 2 and pin 3 are inturrpt pins (MUST BE 2 OR 3)
-#define Motor0EncoderPinB 25  // Encoder Pin B
+#define Motor0EncoderPinA 19//20   // Encoder Pin A pin 2 and pin 3 are inturrpt pins (MUST BE 2 OR 3)
+#define Motor0EncoderPinB 14//25  // Encoder Pin B
 #define Motor0PWM 46
-#define Motor0INT 3
+#define Motor0INT 4
 
 // Motor1 -> Elevation
 #define Motor1PinA 51
@@ -52,6 +52,7 @@
 #define EL_MINLIM_ENC -500 
 
 #define MOTOR_C_QRT_RND 1050
+#define SHOOT_DELAY 500
 
 //Initialize Variables
 int encoder0PinA = -1;
@@ -72,6 +73,8 @@ long commandAz = 0;
 long commandEl = 0;
 long commandEnc = 0;
 long commandTestUpdate = -60000;//millis();
+
+long shootTime = 0;
 
 // PID0
 double Setpoint0 = 0;
@@ -175,13 +178,13 @@ void loop() {
     PRINTLNDEBUG( nOutput2)
   }*/
 
-  if (abs(commandEl) > 0) {
+  if (abs(commandAz) > 0) {
     PRINTDEBUG("-->");
-    PRINTDEBUG( Setpoint1);
+    PRINTDEBUG( Setpoint0);
     PRINTDEBUG(" , ");
-    PRINTDEBUG( Input1)
+    PRINTDEBUG( Input0)
     PRINTDEBUG(" , ");
-    PRINTLNDEBUG( nOutput1)
+    PRINTLNDEBUG( nOutput0)
   }  
   
   if (motor2.getState() == 0) readyToShoot = true;
@@ -195,13 +198,13 @@ void loop() {
     //Serial.println(inputString);
     // clear the string:
     commandAz = (((byte)inputString[0]) - 128) * 20;//40;
-    commandEl = -(((byte)inputString[1]) - 128) * 5;//40;
+    commandEl = -(((byte)inputString[1]) - 128) * 10;//40;
     //Serial.println(commandTest);
     inputString = "";
     stringComplete = false;
   }
 
-  //commandEl = -200;
+ // commandAz = 1000;
   
 /*
   if (millis() - commandTestUpdate > 1000) {
@@ -218,8 +221,8 @@ void loop() {
 
 void readEncoder0() //this function is triggered by the encoder CHANGE, and increments the encoder counter
 {
-  if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB) ) counts0--;
-  else counts0++;
+  if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB) ) counts0++;
+  else counts0--;
 }
 
 void readEncoder1() //this function is triggered by the encoder CHANGE, and increments the encoder counter
@@ -236,7 +239,10 @@ void readEncoder2() //this function is triggered by the encoder CHANGE, and incr
 
 void shootCommand() //this function is triggered by the encoder falling, and increments the encoder counter
 {
-   shootFlag = true;
+  if ((millis() - shootTime) > SHOOT_DELAY) {
+      shootFlag = true;
+      shootTime = millis();
+  }
 }
 
 void shoot() {
@@ -257,6 +263,8 @@ void serialEvent() {
     // do something about it:
     if (inChar == '\n') {
       stringComplete = true;
+        PRINTDEBUG("got input from oculus : ");
+        PRINTLNDEBUG( inputString)
     }
   }
 }

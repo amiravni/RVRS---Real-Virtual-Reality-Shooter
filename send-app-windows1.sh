@@ -25,20 +25,18 @@ if [ $? -eq 0 ]; then
     RIGHTC_TITLE="$(wmctrl -l | grep -i $RIGHTC | awk '{$1=$2=$3="";print }')"	
 #printf "THIS IS A TEST %s",$LEFT_TITLE
 #printf "THIS IS A TEST 2 %s",$RIGHT_TITLE
-    #wmctrl -r $LEFT_TITLE -e 0,3840,0,960,1080
-	wmctrl -r $LEFT_TITLE -e 0,3840,0,960,1080
+    wmctrl -r $LEFT_TITLE -e 0,1920,0,960,1080
+
+    sleep 0.1
+
+    wmctrl -r $RIGHT_TITLE -e 0,2880,0,960,1080
+    sleep 0.1
+
+    wmctrl -r $RIGHTC_TITLE -e 0,0,0,400,310	
 	
     sleep 0.1
 
-    #wmctrl -r $RIGHT_TITLE -e 0,4800,0,960,1080
-	wmctrl -r $RIGHT_TITLE -e 0,4800,0,960,1080
-    sleep 0.1
-
-    wmctrl -r $RIGHTC_TITLE -e 0,1920,0,800,620	
-	
-    sleep 0.1
-
-    wmctrl -r $LEFTC_TITLE -e 0,0,0,600,480		
+    #wmctrl -r $LEFTC_TITLE -e 0,0,0,600,480		
 
 fi
 

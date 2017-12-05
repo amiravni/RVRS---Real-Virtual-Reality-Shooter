@@ -23,6 +23,7 @@ import face_recognition # https://github.com/ageitgey/face_recognition
 NUMOFSCREENS = 2
 MAX_FACES = 10
 serialExist = True
+
 wanted_dir = "./examples/wanted/"
 boring_dir = "./examples/boring/"
 camera_L = 1
@@ -32,6 +33,12 @@ factor_LR = 0.6
 factor_UD = 0.1
 factor_line = 0.2
 DRAW_RIGHT_EYE = True
+cy_sub = 540
+cx_sub = 960
+dx_sub = 150
+dy_sub = 100
+tmp_dy_sub = 80
+tmp_dx_sub = 0
 
 left_camera_image = -1
 right_camera_image = -1
@@ -41,51 +48,16 @@ face_interest_global = []
 face_landmarks_list_global = []
 wanted_list_global = []
 tracking_frame_global = []
+wanted_sz = 100
+	
 grab_data = True
 track_data = False
 dx = 0
 dy = 0
 frame_lock = Lock()
 
-'''
-def track_handle():
-	global face_locations_global
-	global tracking_frame_global
-	global track_data
-	faces_positions_local = []
-	while True:
-		if track_data == True:
-			frame_lock.acquire()
-			try:
-				faces_positions_local = face_locations_global
-				tracking_frame_local =  tracking_frame_global
-				track_data = False
-			finally:
-				frame_lock.release()
-	
-			if len(faces_positions_local) > 0:
-				for fff in range(0,len(faces_positions_local)):
-					#tracker[fff].start_track(tracking_frame, dlib.rectangle(top = faces_positions_local[fff][0],right = faces_positions_local[fff][1],bottom= faces_positions_local[fff][2],left = faces_positions_local[fff][3]))
-					tracker[fff].start_track(tracking_frame_local, dlib.rectangle(top = int(faces_positions_local[fff][0] / float(scaling_factor_tracker) ),right = int(faces_positions_local[fff][1] / float(scaling_factor_tracker)),bottom= int(faces_positions_local[fff][2] / float(scaling_factor_tracker)),left = int(faces_positions_local[fff][3] / float(scaling_factor_tracker))))
-				#cv2.imshow('TMP',tracking_frame[ int(faces_positions_local[fff][0] / float(scaling_factor_tracker)) : int(faces_positions_local[fff][2] / float(scaling_factor_tracker)) , int(faces_positions_local[fff][3] / float(scaling_factor_tracker)) : int(faces_positions_local[fff][1] / float(scaling_factor_tracker))  ] )
-			
-		# Update the tracker 
-		if len(faces_positions_local) > 0:
-			time1 = time.time()
-			for fff in range(0,len(faces_positions_local)):
-				stamp = tracking_frame[ int(faces_positions_local[fff][0] -10 / float(scaling_factor_tracker))+10 : int(faces_positions_local[fff][2] / float(scaling_factor_tracker))-10 , int(faces_positions_local[fff][3] / float(scaling_factor_tracker)) : int(faces_positions_local[fff][1] / float(scaling_factor_tracker)) +10 ] 
-				face_locations_stamp = face_recognition.face_locations(stamp, number_of_times_to_upsample=0, model="hog")
-				#print len(face_locations_stamp)
-				if len(face_locations_stamp) > 0:
-					tracker[fff].update(tracking_frame)
-					rect = tracker[fff].get_position()
-					faces_positions_local[fff] = ([int(rect.top()* scaling_factor_tracker ),int(rect.right()* scaling_factor_tracker),int(rect.bottom()* scaling_factor_tracker),int(rect.left()* scaling_factor_tracker)]) 
-			print "tracker:  ", ( time.time() - time1 )
-			cv2.imshow('TMP',tracking_frame[ int(faces_positions_local[fff][0] / float(scaling_factor_tracker)) : int(faces_positions_local[fff][2] / float(scaling_factor_tracker)) , int(faces_positions_local[fff][3] / float(scaling_factor_tracker)) : int(faces_positions_local[fff][1] / float(scaling_factor_tracker))  ] )
-'''
-
-
 def cameras_handle():
+	global wanted_sz
 	global left_camera_image
 	global right_camera_image	
 	global face_locations_global
@@ -119,16 +91,14 @@ def cameras_handle():
 	frameIdx = 0
 	cameras_alligened = False
 	tracker = []
+	wanted_list_local = []
 	time1 = time.time()
 	time_g = time.time()
 	crop = [270,1080-270,480,1920-480] #top bottom left right
-	'''
-	# Initial co-ordinates of the object to be tracked 
-	# Create the tracker object
-	for fff in range(0,MAX_FACES):
-		tracker.append(dlib.correlation_tracker())
-	'''
+	
+	
 	while True:
+		colorLine = (255, 0, 0)
 		ret1,left_img = cam_left.read()
 		ret2,right_img = cam_right.read()
 		if ret1 and ret2:
@@ -174,15 +144,16 @@ def cameras_handle():
 
 			for (top, right, bottom, left), name,intrst in zip(faces_positions_local, faces_names_local,faces_interest_local):
 				# Scale back up face locations since the frame we detected in was scaled to 1/4 size
-				top *= scaling_factor
-				right *= scaling_factor
-				bottom *= scaling_factor
-				left *= scaling_factor
+				top = top*scaling_factor + cy_sub - dy_sub + tmp_dy_sub*2
+				right = right*scaling_factor + cx_sub - dx_sub
+				bottom = bottom*scaling_factor + cy_sub - dy_sub + tmp_dy_sub*2
+				left = left*scaling_factor + cx_sub - dx_sub
 
+				
 				if intrst:
-					colorLine = (0, 0, 255)
-				else:
 					colorLine = (0, 255, 0)
+				else:
+					colorLine = (0, 0, 255)
 				
 				if DRAW_RIGHT_EYE:
 					drawingFrame = resized_right_img
@@ -196,33 +167,55 @@ def cameras_handle():
 				center_Y = int(top + float(bottom - top)/2)
 				center_X = int(left + float(right - left)/2)
 				factorLine = int(factor_line*float(right - left))
-				cv2.line(drawingFrame,(center_X - factorLine,center_Y),(center_X + factorLine,center_Y), colorLine,4)
-				cv2.line(drawingFrame,(center_X,center_Y - factorLine),(center_X,center_Y + factorLine), colorLine,4)
+				#cv2.line(drawingFrame,(center_X - factorLine,center_Y),(center_X + factorLine,center_Y), colorLine,4)
+				#cv2.line(drawingFrame,(center_X,center_Y - factorLine),(center_X,center_Y + factorLine), colorLine,4)
 				# Draw a label with a name below the face
 				cv2.rectangle(drawingFrame, (left, bottom - 0), (right, bottom), colorLine, -1)
 				font = cv2.FONT_HERSHEY_DUPLEX
-				cv2.putText(drawingFrame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)				
+				cv2.putText(drawingFrame, name, (left + 6, bottom - 6), font, 2.0, colorLine, 1)				
 			
-			tmp_dx = 0
-			tmp_dy = 0
+
 			#left_canvas[180:900,:] = resized_left_img.astype('uint8')#((resized_left_img.astype('uint8') + resized_right_img.astype('uint8')) / 2).astype('uint8')
 			#right_canvas[180:900,:] = resized_right_img.astype('uint8')
 			
 			resized_left_img2 = cv2.resize(resized_left_img,(960,720))
-			resized_right_img2 = cv2.resize(resized_right_img,(960,720))
+			resized_left_img2_no_marker = copy.deepcopy(resized_left_img2)
 			
-			cv2.imshow('left',resized_left_img2)
-			cv2.imshow('right',resized_right_img2)
-			cv2.imshow('left_comp',resized_left_img2)
-			cv2.imshow('right_comp',resized_right_img2)
+			resized_right_img2 = cv2.resize(resized_right_img,(960,720))		
+			resized_right_img2_no_marker = copy.deepcopy(resized_right_img2)
+			
+			delta_x = 0
+			if len(wanted_list_local) > 0:
+				for ind, wntd in enumerate(wanted_list_local):
+					resized_right_img2[(ind)*wanted_sz+delta_x:(ind+1)*wanted_sz+delta_x,0:wanted_sz] = wntd
+					resized_left_img2[(ind)*wanted_sz:(ind+1)*wanted_sz,0:wanted_sz] = wntd
+			else:
+				frame_lock.acquire()
+				try:
+					wanted_list_local = copy.deepcopy(wanted_list_global)
+				finally:
+					frame_lock.release()			
+			
+			cv2.circle(resized_left_img2,(480,360+tmp_dy_sub), 40, colorLine, 2)
+			#cv2.circle(resized_left_img2,(480,360+tmp_dy), 30, (0,0,255), 2)
+			cv2.circle(resized_left_img2,(480,360+tmp_dy_sub), 20, colorLine, 2)
+			cv2.line(resized_left_img2,(430,360+tmp_dy_sub), (530,360+tmp_dy_sub), colorLine, 2)
+			cv2.line(resized_left_img2,(480,310+tmp_dy_sub), (480,410+tmp_dy_sub), colorLine, 2)
 
-			#cv2.imshow('left',left_canvas)
-			#cv2.imshow('right',right_canvas)
-			#cv2.imshow('left_comp',left_canvas)
-			#cv2.imshow('right_comp',right_canvas)			
+			cv2.circle(resized_right_img2,(480,360+tmp_dy_sub), 40, colorLine, 2)
+			#cv2.circle(resized_right_img2,(480,360+tmp_dy), 30, (0,0,255), 2)
+			cv2.circle(resized_right_img2,(480,360+tmp_dy_sub), 20,colorLine, 2)
+			cv2.line(resized_right_img2,(430,360+tmp_dy_sub), (530,360+tmp_dy_sub), colorLine, 2)
+			cv2.line(resized_right_img2,(480,310+tmp_dy_sub), (480,410+tmp_dy_sub), colorLine, 2)
+			
+			cv2.imshow('left',resized_left_img2_no_marker)
+			cv2.imshow('right',resized_right_img2)
+			#cv2.imshow('left_comp',resized_left_img2_no_marker)
+			cv2.imshow('right_comp',resized_right_img2)
+			
 			cv2.waitKey(1)
 			if frameIdx > 10 and  not send_screens:
-				#os.system('bash send-app-windows'+str(NUMOFSCREENS) +'.sh')
+				os.system('bash send-app-windows'+str(NUMOFSCREENS) +'.sh')
 				send_screens=True 	
 		
 		
@@ -231,6 +224,7 @@ def rec_face(frame_rec):
 	return face_locations
 
 def face_recognition_handle():
+	global wanted_sz
 	global left_camera_image
 	global right_camera_image
 	global face_locations_global
@@ -238,11 +232,14 @@ def face_recognition_handle():
 	global face_interest_global
 	global face_landmarks_list_global
 	global grab_data
-
+	global wanted_list_global
 		
+	print(os.system('ls /dev/video*'))
 	list_names = []
 	list_encoding = []
 	list_interest = []
+	wanted_list_local =[]
+	
 	tracker = []
 	# Initial co-ordinates of the object to be tracked 
 	# Create the tracker object
@@ -258,14 +255,17 @@ def face_recognition_handle():
 			list_encoding.append(face_encoding)
 			list_interest.append(True)	
 			
+			#add wanted pictures to list
+			wanted_resized = cv2.resize(image, (wanted_sz,wanted_sz))
+			wanted_resized = cv2.cvtColor(wanted_resized, cv2.COLOR_BGR2RGB)
+			wanted_resized = cv2.rectangle(wanted_resized, (0, 0), (wanted_sz, wanted_sz), (0, 0, 255),5)
+			wanted_list_local.append(wanted_resized)				
 			
-			
-			'''
-			add wanted pictures to list
-			wanted_resized = cv2.resize(image, (100,100))
-			wanted_list_global.append(wanted_resized)			
-			
-			'''
+			frame_lock.acquire()
+			try:
+				wanted_list_global = wanted_list_local
+			finally:
+				frame_lock.release()	
 		else:
 			continue
 
@@ -283,15 +283,6 @@ def face_recognition_handle():
 			continue
 	print list_names
 	print list_interest
-	'''
-	amir_image = face_recognition.load_image_file("./examples/amir.jpg")
-	amir_face_encoding = face_recognition.face_encodings(amir_image)[0]
-	alon_image = face_recognition.load_image_file("./examples/alon.jpg")
-	alon_face_encoding = face_recognition.face_encodings(alon_image)[0]
-	aviv_image = face_recognition.load_image_file("./examples/aviv.jpg")
-	aviv_face_encoding = face_recognition.face_encodings(aviv_image)[0]
-	#print [alon_face_encoding ,amir_face_encoding,aviv_face_encoding]
-	'''
 					
 	#print len(list_encoding)
 	# Initialize some variables
@@ -303,7 +294,7 @@ def face_recognition_handle():
 	tim1 = time.time()
 	last_time = time.time()
 	
-	
+	new_faces_pos = []
 	
 	while True:		
 		frame_lock.acquire()
@@ -321,32 +312,54 @@ def face_recognition_handle():
 		else:		
 			# Find all the faces and face encodings in the current frame of video
 			if time.time() - last_time > 0.95:
-				face_locations = rec_face(frame_rec);
-				face_encodings = face_recognition.face_encodings(frame_rec, face_locations)
+				
+				# run face recognition only on the center of the image
+
+				sub_frame = copy.deepcopy(frame_rec[cy_sub - dx_sub + tmp_dy_sub :cy_sub+dx_sub + tmp_dy_sub,cx_sub - dy_sub :cx_sub+dy_sub])
+				#cv2.imshow('sub_frame',sub_frame)
+				#cv2.waitKey(1)
+				new_faces_pos = []
+						
+				face_locations = rec_face(sub_frame);
+				
+								
+				#print face_locations
+				#face_locations = rec_face(frame_rec);				
+				
+				#face_encodings = face_recognition.face_encodings(frame_rec, face_locations)
+				
+				face_encodings = face_recognition.face_encodings(sub_frame, face_locations)
+				
 				last_time = time.time()
 				face_names = []
 				face_interest = []
 				faces_cnt = 0 
 				for face_encoding in face_encodings:
 					# See if the face is a match for the known face(s)
-					#match = face_recognition.compare_faces([alon_face_encoding ,amir_face_encoding,aviv_face_encoding], face_encoding)
-
 					match = face_recognition.compare_faces(list_encoding, face_encoding)
-					#print "1) ",match
 					faces_cnt = faces_cnt+ 1
 
 					if any(match):
 						for m , name,intrs in zip(match,list_names,list_interest):
-							#print "2) ",m,name,intrs
 							if m == True:
-								#print "1. " , name
 								face_names.append(name)
 								face_interest.append(intrs)
 								break
 						else:
 							face_names.append("Uninvolved")
 							face_interest.append(False)
-				
+					'''
+					print face_locations
+					new_faces_pos.append([face_locations[0][0]+cx,face_locations[0][1]+cy,face_locations[0][2]+cx,face_locations[0][3]+cy])
+					print new_faces_pos
+					
+					face_locations[0][0] = face_locations[0][0]+ cx
+					face_locations[0][1] = face_locations[0][1] + cy
+					face_locations[0][2] = face_locations[0][2] + cx
+					face_locations[0][3] = face_locations[0][3] + cy
+					
+					face_locations = new_faces_pos
+					'''
 					frame_lock.acquire()
 					try:
 						face_names_global = copy.deepcopy(face_names)
@@ -369,18 +382,17 @@ def face_recognition_handle():
 						tracker[fff].update(frame_rec)
 						rect = tracker[fff].get_position()
 						face_locations[fff] = ([int(rect.top()* scaling_factor_tracker ),int(rect.right()* scaling_factor_tracker),int(rect.bottom()* scaling_factor_tracker),int(rect.left()* scaling_factor_tracker)]) 
-				'''
-				# Update the tracker 
-				if len(face_locations) > 0:
-					for fff in range(0,len(face_locations)):
-						stamp = frame_rec[ int(face_locations[fff][0] / float(scaling_factor_tracker)) : int(face_locations[fff][2] / float(scaling_factor_tracker)), int(face_locations[fff][3] / float(scaling_factor_tracker)) : int(face_locations[fff][1] / float(scaling_factor_tracker))  ] 
+						'''
+						dx = 0
+						dy = 0
+						stamp = frame_rec[ int(face_locations[fff][0] / float(scaling_factor_tracker))-dy : int(face_locations[fff][2] / float(scaling_factor_tracker))+dy , int(face_locations[fff][3] / float(scaling_factor_tracker))-dx : int(face_locations[fff][1] / float(scaling_factor_tracker)) +dx ] 
 						face_locations_stamp = face_recognition.face_locations(stamp, number_of_times_to_upsample=0, model="hog")
+						#print len(face_locations_stamp)
 						if len(face_locations_stamp) > 0:
-							tracker[fff].update(frame_rec)
-							rect = tracker[fff].get_position()
+							face_locations[fff] = ([int(0),int(0),int(0),int(0)]) 
+						else:									
 							face_locations[fff] = ([int(rect.top()* scaling_factor_tracker ),int(rect.right()* scaling_factor_tracker),int(rect.bottom()* scaling_factor_tracker),int(rect.left()* scaling_factor_tracker)]) 
-					cv2.imshow('TMP',frame_rec[ int(face_locations[fff][0] / float(scaling_factor_tracker)) : int(face_locations[fff][2] / float(scaling_factor_tracker)) , int(face_locations[fff][3] / float(scaling_factor_tracker)) : int(face_locations[fff][1] / float(scaling_factor_tracker))  ] )
-				'''
+						'''
 				time.sleep(0.1)
 				frame_lock.acquire()
 				try:
@@ -429,7 +441,7 @@ def oculus_handle():
 		yaw_lastStep  = yaw_steps
 		yaw_steps = int(round(yaw_newStep))
 
-		
+		'''
 		if q.ra > 45 and q.ra < 90:
 			raLim = 45.0
 		elif q.ra > 90 and q.ra < 135:
@@ -440,8 +452,15 @@ def oculus_handle():
 			raLim = 315.0		
 		else:
 			raLim = q.ra
+		'''
+		if q.ra > 23 and q.ra < 180:
+			raLim = 23.0
+		elif q.ra > 180 and q.ra < 338:
+			raLim = 338.0		
+		else:
+			raLim = q.ra
 			
-		if raLim < 90 or raLim > 270 :
+		if raLim <= 90 or raLim >= 270 :
 			raLim = np.mod(raLim + 180,360)			
 			
 		
@@ -451,7 +470,7 @@ def oculus_handle():
 
 		#print q.ra,raLim,pitch_steps
 		if yaw_steps != yaw_lastStep or pitch_steps != pitch_lastStep:
-			print(q.dec,q.ra,yaw_steps,pitch_steps)
+			print(q.dec,q.ra,yaw_steps,pitch_steps,raLim)
 		#ser.write(struct.pack(2*'B',yaw_steps + 128,pitch_steps + 128))
 		if serialExist:
 			ser.write(struct.pack('BBB',yaw_steps+128,pitch_steps,10))
@@ -463,12 +482,12 @@ def oculus_handle():
 
 
 if __name__ == '__main__':
-    
+	#serialExist = False
 	if serialExist:
-	  ser = serial.Serial(ArduinoCOM,baudrate=115200)
-	  ser.timeout = 0.00	
+		ser = serial.Serial(ArduinoCOM,baudrate=115200)
+		ser.timeout = 0.00	
 	
-	#start_new_thread(face_recognition_handle,())
+	start_new_thread(face_recognition_handle,())
 	start_new_thread(cameras_handle,())
 	start_new_thread(oculus_handle,())
 	#start_new_thread(track_handle,())	
